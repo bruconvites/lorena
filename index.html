@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#5a0a14">
+<title>Aniversário da Lorena – 1 ano</title>
+<style>
+  :root {
+    --gold: 255, 205, 90;
+    --bg: #3b060d;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    overflow: hidden;
+    font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  /* Cada "tela" ocupa a janela inteira */
+  .screen {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+  }
+  .screen.active { display: flex; }
+
+  /* Palco com a proporção das imagens (941 x 1672) */
+  .stage {
+    position: relative;
+    width: min(100vw, calc(100vh * 941 / 1672));
+    aspect-ratio: 941 / 1672;
+    max-height: 100vh;
+  }
+  @supports (height: 100dvh) {
+    .stage { width: min(100vw, calc(100dvh * 941 / 1672)); max-height: 100dvh; }
+  }
+  .stage img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+  }
+
+  /* Vídeo */
+  #screen-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+    display: block;
+  }
+  #screen-video { background: #000; }
+
+  /* Dica inicial */
+  #hint {
+    position: absolute;
+    left: 50%;
+    bottom: calc(10% + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    padding: 12px 26px;
+    border-radius: 999px;
+    color: #fff4d6;
+    font-size: 15px;
+    letter-spacing: .04em;
+    background: rgba(60, 6, 14, .55);
+    border: 1px solid rgba(var(--gold), .7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    animation: pulse 2s ease-in-out infinite;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: .75; }
+    50% { opacity: 1; }
+  }
+
+  /* Botão Pular Introdução */
+  #skip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    display: none;
+    padding: 9px 22px;
+    border-radius: 999px;
+    border: 1px solid rgba(var(--gold), .55);
+    background: rgba(0, 0, 0, .28);
+    color: rgba(255, 244, 214, .9);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    cursor: pointer;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    transition: background .25s, border-color .25s;
+    z-index: 5;
+  }
+  #skip:hover, #skip:focus-visible {
+    background: rgba(var(--gold), .22);
+    border-color: rgba(var(--gold), .95);
+    outline: none;
+  }
+  body.playing #skip { display: block; }
+  body.playing #hint { display: none; }
+
+  /* Áreas clicáveis sobre as imagens */
+  .hotspot {
+    position: absolute;
+    display: block;
+    border-radius: 18px;
+    cursor: pointer;
+    z-index: 3;
+    text-decoration: none;
+  }
+  .hotspot:focus-visible {
+    outline: 3px solid rgba(var(--gold), .9);
+    outline-offset: 2px;
+  }
+
+  /* interativo.jpg (941 x 1672) */
+  #hs-confirmar { left: 12.5%; top: 78.8%; width: 24.7%; height: 16.4%; }
+  #hs-local     { left: 38.2%; top: 78.8%; width: 23.7%; height: 16.4%; }
+  #hs-presente  { left: 62.7%; top: 78.8%; width: 25.2%; height: 16.4%; }
+
+  /* presentes.jpg: botão "Voltar ao Convite" */
+  #hs-voltar { left: 2%; top: 1.4%; width: 35.5%; height: 7.8%; }
+
+  /* Brilho dourado ao tocar */
+  .glow {
+    position: fixed;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1000;
+    background: radial-gradient(circle,
+      rgba(255, 250, 220, .95) 0%,
+      rgba(255, 215, 110, .85) 25%,
+      rgba(255, 190, 60, .45) 55%,
+      rgba(255, 190, 60, 0) 75%);
+    box-shadow: 0 0 22px 8px rgba(255, 205, 90, .55);
+    animation: glow-burst .85s ease-out forwards;
+  }
+  @keyframes glow-burst {
+    0%   { transform: scale(.4); opacity: 1; }
+    60%  { opacity: .85; }
+    100% { transform: scale(7); opacity: 0; }
+  }
+  .spark {
+    position: fixed;
+    width: 7px;
+    height: 7px;
+    margin: -3.5px 0 0 -3.5px;
+    pointer-events: none;
+    z-index: 1000;
+    background: radial-gradient(circle, #fff9dc 0%, #ffd25a 60%, rgba(255, 210, 90, 0) 100%);
+    clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+    animation: spark-fly .9s ease-out forwards;
+  }
+  @keyframes spark-fly {
+    0%   { transform: translate(0, 0) scale(1.4) rotate(0deg); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(.2) rotate(180deg); opacity: 0; }
+  }
+
+  /* Transição suave entre telas */
+  .screen.active .stage { animation: fade-in .5s ease both; }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    #hint { animation: none; }
+    .screen.active .stage { animation: none; }
+    .spark { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1) Vídeo de abertura -->
+<section class="screen active" id="screen-video" aria-label="Vídeo de abertura">
+  <video id="intro" src="video.mp4" playsinline webkit-playsinline preload="auto" disablepictureinpicture controlslist="nodownload nofullscreen noplaybackrate"></video>
+  <div id="hint">Toque na tela para começar</div>
+  <button id="skip" type="button">Pular introdução</button>
+</section>
+
+<!-- 2) Convite interativo -->
+<section class="screen" id="screen-convite" aria-label="Convite">
+  <div class="stage">
+    <img src="interativo.jpg" alt="Convite de 1 ano da Lorena — dia 19/12, às 13h, no Buffet Art Iris" draggable="false">
+    <a class="hotspot" id="hs-confirmar" href="https://wa.me/5511980186058?text=Ol%C3%A1%2C%20quero%20confirmar%20presen%C3%A7a%20no%20anivers%C3%A1rio%20da%20Lorena!%0A%0ASeremos%3A%0A%0A(___)%20ADULTOS%0A%0A(___)%20CRIAN%C3%87AS" aria-label="Confirmação de presença"></a>
+    <a class="hotspot" id="hs-local" href="https://maps.app.goo.gl/ZhaBM9yAGUzxKY5q7" aria-label="Localização"></a>
+    <a class="hotspot" id="hs-presente" href="#presentes" aria-label="Sugestão de presente"></a>
+  </div>
+</section>
+
+<!-- 3) Sugestões de presente -->
+<section class="screen" id="screen-presentes" aria-label="Sugestões de presente">
+  <div class="stage">
+    <img src="presentes.jpg" alt="Sugestões de presente: roupa tamanho 2 ou 3 e sapato tamanho 19 ou 20" draggable="false">
+    <a class="hotspot" id="hs-voltar" href="#convite" aria-label="Voltar ao convite"></a>
+  </div>
+</section>
+
+<script>
+(function () {
+  var video = document.getElementById('intro');
+  var skipBtn = document.getElementById('skip');
+  var screens = {
+    video: document.getElementById('screen-video'),
+    convite: document.getElementById('screen-convite'),
+    presentes: document.getElementById('screen-presentes')
+  };
+  var started = false;
+  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Pré-carrega as imagens para a troca de tela ser instantânea
+  ['interativo.jpg', 'presentes.jpg'].forEach(function (src) {
+    var img = new Image();
+    img.src = src;
+  });
+
+  function show(name) {
+    Object.keys(screens).forEach(function (key) {
+      screens[key].classList.toggle('active', key === name);
+    });
+    document.body.classList.toggle('playing', name === 'video' && started);
+  }
+
+  /* ---------- Brilho dourado em qualquer toque ---------- */
+  function goldenGlow(x, y) {
+    var glow = document.createElement('div');
+    glow.className = 'glow';
+    glow.style.left = x + 'px';
+    glow.style.top = y + 'px';
+    document.body.appendChild(glow);
+    setTimeout(function () { glow.remove(); }, 900);
+
+    if (reducedMotion) return;
+    for (var i = 0; i < 9; i++) {
+      var spark = document.createElement('div');
+      spark.className = 'spark';
+      var angle = (Math.PI * 2 * i) / 9 + Math.random() * 0.6;
+      var dist = 40 + Math.random() * 55;
+      spark.style.left = x + 'px';
+      spark.style.top = y + 'px';
+      spark.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+      spark.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+      document.body.appendChild(spark);
+      setTimeout((function (el) { return function () { el.remove(); }; })(spark), 950);
+    }
+  }
+  document.addEventListener('pointerdown', function (e) {
+    goldenGlow(e.clientX, e.clientY);
+  }, true);
+
+  /* ---------- Vídeo ---------- */
+  function startVideo() {
+    if (started) return;
+    started = true;
+    document.body.classList.add('playing');
+    video.muted = false;
+    var p = video.play();
+    if (p && p.catch) {
+      p.catch(function () {
+        // Se o navegador bloquear o som, toca sem áudio em vez de travar
+        video.muted = true;
+        video.play().catch(function () { goToInvite(); });
+      });
+    }
+  }
+
+  function goToInvite() {
+    video.pause();
+    document.body.classList.remove('playing');
+    show('convite');
+  }
+
+  screens.video.addEventListener('click', function (e) {
+    if (e.target === skipBtn) return;
+    startVideo();
+  });
+
+  skipBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    setTimeout(goToInvite, 250);
+  });
+
+  video.addEventListener('ended', goToInvite);
+  video.addEventListener('error', function () {
+    // Se o vídeo não carregar, segue direto para o convite
+    if (started) goToInvite();
+  });
+
+  /* ---------- Navegação dos botões ---------- */
+  function wire(id, action) {
+    var el = document.getElementById(id);
+    el.addEventListener('click', function (e) {
+      e.preventDefault();
+      setTimeout(action, 350); // deixa o brilho aparecer antes de trocar
+    });
+  }
+  wire('hs-presente', function () { show('presentes'); });
+  wire('hs-voltar', function () { show('convite'); });
+  wire('hs-confirmar', function () {
+    window.location.href = document.getElementById('hs-confirmar').href;
+  });
+  wire('hs-local', function () {
+    window.location.href = document.getElementById('hs-local').href;
+  });
+})();
+</script>
+</body>
+</html>
